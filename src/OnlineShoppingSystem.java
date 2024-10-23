@@ -1,43 +1,8 @@
-import java.util.AbstractSet;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Scanner;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashMap;
+import java.util.*;
 
-public class OnlineShoppingSystem {
-    public static void main(String args[])
-    {
-        Scanner sc = new Scanner(System.in);
-
-        ShoppingCart s = new ShoppingCart();
-        int choice = 999;
-
-        while( choice!=0)
-        {
-            System.out.println("Press \n1.Add Items \n2.RemoveItems \n3.View Items \n4.Total \n0.Exit ");
-            choice= sc.nextInt();
-            switch (choice)
-            {
-                case 1:
-                    s.addItems();
-                    break;
-                case 2:
-                    s.removeItems();
-                    break;
-                case 3:
-                    s.viewCart();
-                    break;
-                case 4:
-                    s.calculateTotalPrice();
-                    break;
-             }
-        }
-    }
-}
-
-
-// Class representing a Product
+// Class representing a product
 class Product {
     private int productID;
     private String name;
@@ -72,128 +37,118 @@ class Product {
     }
 }
 
-// Class representing the Shopping Cart
+// Class representing the shopping cart
 class ShoppingCart {
-    private List<CartItem> cartItems;
+    Map<Product, Integer> cartItems = new HashMap<>();
 
-    public ShoppingCart() {
-        cartItems = new ArrayList<>();
+    // Add product to the cart
+    public void addItem(Product product, int quantity) {
+        if (product.getQuantityAvailable() >= quantity) {
+            cartItems.put(product, cartItems.getOrDefault(product, 0) + quantity);
+            product.setQuantityAvailable(product.getQuantityAvailable() - quantity);
+        } else {
+            System.out.println("Not enough stock available for " + product.getName());
+        }
     }
 
-    public void addItem(Product product, int quantity) {
-        for (CartItem item : cartItems) {
-            if (item.getProduct().getProductID() == product.getProductID()) {
-                item.setQuantity(item.getQuantity() + quantity);
-                return;
+    // Remove product from the cart
+    public void removeItem(Product product, int quantity) {
+        if (cartItems.containsKey(product)) {
+            int currentQuantity = cartItems.get(product);
+            if (quantity >= currentQuantity) {
+                cartItems.remove(product);
+            } else {
+                cartItems.put(product, currentQuantity - quantity);
+            }
+            product.setQuantityAvailable(product.getQuantityAvailable() + quantity);
+        } else {
+            System.out.println("Product not in cart.");
+        }
+    }
+
+    // View all items in the cart
+    public void viewCart() {
+        if (cartItems.isEmpty()) {
+            System.out.println("Your cart is empty.");
+        } else {
+            for (Map.Entry<Product, Integer> entry : cartItems.entrySet()) {
+                Product product = entry.getKey();
+                int quantity = entry.getValue();
+                System.out.println("Product: " + product.getName() + " | Quantity: " + quantity + " | Price: " + product.getPrice());
             }
         }
-        cartItems.add(new CartItem(product, quantity));
     }
 
-    public void removeItem(Product product, int quantity) {
-        cartItems.removeIf(item -> item.getProduct().getProductID() == product.getProductID()
-                && item.getQuantity() == quantity);
-    }
-
-    public void viewCart() {
-        for (CartItem item : cartItems) {
-            System.out.println("Product: " + item.getProduct().getName() +
-                    " | Quantity: " + item.getQuantity() +
-                    " | Price: " + item.getProduct().getPrice());
-        }
-    }
-
+    // Get total price of the items in the cart
     public double getTotalPrice() {
         double total = 0;
-        for (CartItem item : cartItems) {
-            total += item.getQuantity() * item.getProduct().getPrice();
+        for (Map.Entry<Product, Integer> entry : cartItems.entrySet()) {
+            Product product = entry.getKey();
+            int quantity = entry.getValue();
+            total += product.getPrice() * quantity;
         }
         return total;
     }
 }
 
-// Helper class to represent items in the cart
-class CartItem {
-    private Product product;
-    private int quantity;
-
-    public CartItem(Product product, int quantity) {
-        this.product = product;
-        this.quantity = quantity;
-    }
-
-    public Product getProduct() {
-        return product;
-    }
-
-    public int getQuantity() {
-        return quantity;
-    }
-
-    public void setQuantity(int quantity) {
-        this.quantity = quantity;
-    }
-}
-
-// Class representing an Order
+// Class representing an order
 class Order {
     private int orderID;
-    private List<CartItem> orderItems;
+    private Map<Product, Integer> orderedItems;
     private double totalPrice;
 
-    public Order(int orderID, List<CartItem> orderItems) {
+    public Order(int orderID, Map<Product, Integer> items) {
         this.orderID = orderID;
-        this.orderItems = new ArrayList<>(orderItems);
+        this.orderedItems = new HashMap<>(items); // Deep copy of the cart items
         this.totalPrice = calculateTotalPrice();
-    }
-
-    private double calculateTotalPrice() {
-        double total = 0;
-        for (CartItem item : orderItems) {
-            total += item.getQuantity() * item.getProduct().getPrice();
-        }
-        return total;
-    }
-
-    public double getTotalPrice() {
-        return totalPrice;
     }
 
     public int getOrderID() {
         return orderID;
     }
 
-    public void viewOrder() {
-        System.out.println("Order ID: " + orderID);
-        for (CartItem item : orderItems) {
-            System.out.println("Product: " + item.getProduct().getName() +
-                    " | Quantity: " + item.getQuantity() +
-                    " | Price: " + item.getProduct().getPrice());
+    public double getTotalPrice() {
+        return totalPrice;
+    }
+
+    private double calculateTotalPrice() {
+        double total = 0;
+        for (Map.Entry<Product, Integer> entry : orderedItems.entrySet()) {
+            total += entry.getKey().getPrice() * entry.getValue();
         }
-        System.out.println("Total Price: " + totalPrice);
+        return total;
+    }
+
+    public void displayOrderDetails() {
+        System.out.println("Order ID: " + orderID);
+        for (Map.Entry<Product, Integer> entry : orderedItems.entrySet()) {
+            System.out.println("Product: " + entry.getKey().getName() + " | Quantity: " + entry.getValue());
+        }
+        System.out.println("Total Price: $" + totalPrice);
     }
 }
 
-// Class to handle the Order History
+// Class representing the user's order history
 class OrderHistory {
-    private List<Order> pastOrders;
-
-    public OrderHistory() {
-        pastOrders = new ArrayList<>();
-    }
+    private ArrayList<Order> pastOrders = new ArrayList<>();
 
     public void addOrder(Order order) {
         pastOrders.add(order);
     }
 
     public void viewOrderHistory() {
-        for (Order order : pastOrders) {
-            order.viewOrder();
+        if (pastOrders.isEmpty()) {
+            System.out.println("No past orders.");
+        } else {
+            for (Order order : pastOrders) {
+                order.displayOrderDetails();
+                System.out.println();
+            }
         }
     }
 }
 
-// Class representing the User
+// Class representing the user
 class User {
     private int userID;
     private String name;
@@ -215,5 +170,126 @@ class User {
 
     public OrderHistory getOrderHistory() {
         return orderHistory;
+    }
+}
+
+// Main class
+public class OnlineShoppingSystem {
+    public static void main(String[] args) {
+        Scanner sc = new Scanner(System.in);
+        User user = new User(1, "John Doe", "johndoe@example.com");
+
+        // Predefined products
+        Product product1 = new Product(101, "Laptop", 800.00, 10);
+        Product product2 = new Product(102, "Phone", 500.00, 20);
+        Product product3 = new Product(103, "Headphones", 100.00, 30);
+
+        int choice = -1;
+        int orderID = 1;
+
+        while (choice != 0) {
+            System.out.println("\nMenu:");
+            System.out.println("1. Add Items");
+            System.out.println("2. Remove Items");
+            System.out.println("3. View Cart");
+            System.out.println("4. View Total Price");
+            System.out.println("5. Checkout and Place Order");
+            System.out.println("6. View Order History");
+            System.out.println("0. Exit");
+            System.out.print("Enter your choice: ");
+            choice = sc.nextInt();
+
+            switch (choice) {
+                case 1: // Add items
+                    System.out.println("Available Products: \n1. Laptop \n2. Phone \n3. Headphones");
+                    System.out.print("Enter product number to add: ");
+                    int productChoice = sc.nextInt();
+                    Product selectedProduct = null;
+
+                    switch (productChoice) {
+                        case 1:
+                            selectedProduct = product1;
+                            break;
+                        case 2:
+                            selectedProduct = product2;
+                            break;
+                        case 3:
+                            selectedProduct = product3;
+                            break;
+                        default:
+                            System.out.println("Invalid product choice!");
+                    }
+
+                    if (selectedProduct != null) {
+                        System.out.print("Enter quantity to add: ");
+                        int quantity = sc.nextInt();
+                        user.getShoppingCart().addItem(selectedProduct, quantity);
+                        System.out.println("Added " + quantity + " of " + selectedProduct.getName());
+                    }
+                    break;
+
+                case 2: // Remove items
+                    System.out.println("Enter the product number to remove (1. Laptop, 2. Phone, 3. Headphones): ");
+                    productChoice = sc.nextInt();
+                    selectedProduct = null;
+
+                    switch (productChoice) {
+                        case 1:
+                            selectedProduct = product1;
+                            break;
+                        case 2:
+                            selectedProduct = product2;
+                            break;
+                        case 3:
+                            selectedProduct = product3;
+                            break;
+                        default:
+                            System.out.println("Invalid product choice!");
+                    }
+
+                    if (selectedProduct != null) {
+                        System.out.print("Enter quantity to remove: ");
+                        int quantity = sc.nextInt();
+                        user.getShoppingCart().removeItem(selectedProduct, quantity);
+                        System.out.println("Removed " + quantity + " of " + selectedProduct.getName());
+                    }
+                    break;
+
+                case 3: // View items in the cart
+                    System.out.println("\nItems in your cart:");
+                    user.getShoppingCart().viewCart();
+                    break;
+
+                case 4: // View total price of the cart
+                    System.out.println("Total Price: $" + user.getShoppingCart().getTotalPrice());
+                    break;
+
+                case 5: // Checkout and place order
+                    if (user.getShoppingCart().getTotalPrice() > 0) {
+                        System.out.println("Placing your order...");
+                        Order order = new Order(orderID++, user.getShoppingCart().cartItems);
+                        user.getOrderHistory().addOrder(order);
+                        user.getShoppingCart().cartItems.clear(); // Clear cart after checkout
+                        System.out.println("Order placed successfully! Order ID: " + order.getOrderID());
+                    } else {
+                        System.out.println("Your cart is empty. Add items before checking out.");
+                    }
+                    break;
+
+                case 6: // View order history
+                    System.out.println("\nOrder History:");
+                    user.getOrderHistory().viewOrderHistory();
+                    break;
+
+                case 0: // Exit
+                    System.out.println("Exiting...");
+                    break;
+
+                default:
+                    System.out.println("Invalid choice, please try again.");
+            }
+        }
+
+
     }
 }
